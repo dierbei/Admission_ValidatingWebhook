@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: validating-webhook
+  namespace: admission
+  labels:
+    app: validating-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: validating-webhook
+  template:
+    metadata:
+      labels:
+        app: validating-webhook
+    spec:
+      containers:
+        - name: validating-webhook
+          image: docker.io/dierbei/admission_validating:202304271728
+          ports:
+            - containerPort: 8080
+          env:
+            - name: CERT_DIR
+              value: "/etc/validating-webhook/certs/"
+          volumeMounts:
+            - mountPath: /etc/validating-webhook/certs/
+              name: tls-cert
+      volumes:
+        - name: tls-cert
+          secret:
+            secretName: validating-webhook-tls-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: validating-webhook
+  namespace: admission
+spec:
+  type: ClusterIP
+  selector:
+    app: validating-webhook
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 8080

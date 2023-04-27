@@ -1,0 +1,45 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: nginx.validate.extend.k8s
+  namespace: admission
+  annotations:
+    cert-manager.io/inject-ca-from: admission/validating-webhook-tls-secret
+webhooks:
+  # webhook 的名称
+  - name: nginx.validate.extend.k8s
+    # 用于指定 webhook 只对指定的 Namespace 生效
+    namespaceSelector:
+      matchLabels:
+        nginx: "true"
+    rules:
+      - apiGroups:   [""]
+        apiVersions: ["v1"]
+        operations:  ["CREATE"]
+        resources:   ["pods"]
+        scope:       "Namespaced"
+    # （Ignore|Fail）
+    # 当值为 Ignore 时，表示当 webhook 处理请求出错时，直接忽略错误，请求继续执行
+    # 当值为 Fail 时，表示当 webhook 处理请求出错时，请求将被拒绝，抛出错误信息
+    failurePolicy: Fail
+    # （Exact|Equivalent）
+    # 当值为 Exact 时，表示请求中的对象必须与配置的规则完全匹配，即所有字段都必须匹配
+    # 当值为 Equivalent 时，表示请求中的对象只需要与配置的规则部分匹配即可，即只要任意一个匹配条件符合即可匹配成功
+    matchPolicy: Exact
+    clientConfig:
+      # （仅支持 https）
+      # service config example
+      service:
+        namespace: admission
+        name: validating-webhook
+        path: /validate
+        port: 443
+      # url config example
+      # url: https://validating-webhook.admission.svc.cluster.local:443/validate
+
+    # 指定了 AdmissionReview 的 API 版本
+    admissionReviewVersions: ["v1", "v1beta1"]
+    # 指定了 webhook 执行时是否会产生副作用
+    sideEffects: None
+    # 指定了 webhook 的超时时间
+    timeoutSeconds: 10
